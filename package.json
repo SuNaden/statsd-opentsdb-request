@@ -1,0 +1,19 @@
+{
+  "name": "statsd-opentsdb",
+  "version": "1.0.0",
+  "description": "Pluggable backend for statsd to send data to opentsdb via HTTP requests Edit",
+  "main": "src/statsd-opentsdb.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SuNaden/statsd-opentsdb.git"
+  },
+  "author": "Filip Stollar",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SuNaden/statsd-opentsdb/issues"
+  },
+  "homepage": "https://github.com/SuNaden/statsd-opentsdb#readme"
+}
