@@ -23,17 +23,10 @@ var opentsdbPort;
 var opentsdbPrefix;
 
 // prefix configuration
-var prefixPersecond;
 var prefixCounter;
 var prefixTimer;
 var prefixGauge;
 var prefixSet;
-
-// set up namespaces
-var counterNamespace = [];
-var timerNamespace   = [];
-var gaugesNamespace  = [];
-var setsNamespace     = [];
 
 var opentsdbStats = {};
 
@@ -50,55 +43,25 @@ var post_stats = function opentsdb_post_stats(statString) {
            console.log(metrics[i]);
            var metric = metrics[i].split(" ");
            if (metric[1] && metric[2]) {
-             console.log({ metric: "localtest." + metric[0],
-                        timestamp: metric[1],
-                        value: metric[2],
-                        tags: {hostname: "MYMACHINE"} });
              request.post(
                opentsdbHost,
-                { json: { metric: "localtest." + metric[0],
+                { json: { metric: metric[0],
                         timestamp: metric[1],
                         value: metric[2],
                         tags: {hostname: "MYMACHINE"} } },
                 function (error, response, body) {
-                   console.log("error" + error);
-                   console.log("res" + response);
-                   console.log("bod" + body);
                 }
              );
            }
       }
       opentsdbStats.last_flush = Math.round(new Date().getTime() / 1000);
     } catch(e){
+      if (debug) {
+        util.log(e);
+      }
       opentsdbStats.last_exception = Math.round(new Date().getTime() / 1000);
     }
   }
-  // if (opentsdbHost) {
-  //   try {
-  //     var opentsdb = net.createConnection(opentsdbPort, opentsdbHost);
-  //     opentsdb.addListener('error', function(connectionException){
-  //       if (debug) {
-  //         util.log(connectionException);
-  //       }
-  //     });
-  //     opentsdb.on('connect', function() {
-  //       var ts = Math.round(new Date().getTime() / 1000);
-  //       statString += opentsdbPrefix + '.opentsdbStats.last_exception ' + last_exception + ' ' + ts + "\n";
-  //       statString += opentsdbPrefix + '.opentsdbStats.last_flush ' + last_flush + ' ' + ts + "\n";
-	// 	if (debug) {
-	// 		util.log(statString)
-	// 	}
-  //       this.write(statString);
-  //       this.end();
-  //       opentsdbStats.last_flush = Math.round(new Date().getTime() / 1000);
-  //     });
-  //   } catch(e){
-  //     if (debug) {
-  //       util.log(e);
-  //     }
-  //     opentsdbStats.last_exception = Math.round(new Date().getTime() / 1000);
-  //   }
-  // }
 }
 
 // Returns a list of "tagname=tagvalue" strings from the given metric name.
@@ -141,7 +104,6 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
   var suffix = "\n";
   var starttime = Date.now();
   var statString = '';
-  var numStats = 0;
   var key;
   var timer_data_key;
   var counters = metrics.counters;
@@ -154,12 +116,8 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
   for (key in counters) {
     var tags = parse_tags(key);
     var stripped_key = strip_tags(key)
-
-    var namespace = counterNamespace.concat(stripped_key);
     var value = counters[key];
-
-    statString += namespace.concat('count').join(".") + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
-    numStats += 1;
+    statString += opentsdbPrefix + "." + prefixCounter + "." + stripped_key + ".count" + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
   }
 
   for (key in timer_data) {
@@ -167,38 +125,29 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
       for (timer_data_key in timer_data[key]) {
         var tags = parse_tags(key);
         var stripped_key = strip_tags(key)
-
         var the_key = opentsdbPrefix + "." + prefixTimer + "." + stripped_key;
         statString += the_key + '.' + timer_data_key + ' ' + ts + ' ' + timer_data[key][timer_data_key] + ' ' + tags.join(' ') + suffix;
       }
-
-      numStats += 1;
     }
   }
 
   for (key in gauges) {
     var tags = parse_tags(key);
     var stripped_key = strip_tags(key)
-
     statString += opentsdbPrefix + '.' + prefixGauge + '.gauge ' + ts + ' ' + gauges[key] + ' ' + tags.join(' ') + suffix;
-    numStats += 1;
   }
 
   for (key in sets) {
     var tags = parse_tags(key);
     var stripped_key = strip_tags(key)
     statString += opentsdbPrefix + '.' + prefixSet + '.count ' + ts + ' ' + sets[key].values().length + ' ' + tags.join(' ') + suffix;
-    numStats += 1;
   }
 
-  statString += opentsdbPrefix + '.numStats ' + ts + ' ' + numStats + suffix;
   statString += opentsdbPrefix + '.opentsdbStats.calculationtime ' + ts + ' ' + (Date.now() - starttime) + suffix;
   for (key in statsd_metrics) {
     var the_key = opentsdbPrefix + "." + key;
     statString += the_key + ' ' + ts + ' ' + statsd_metrics[key];
   }
-
-  console.log(statString);
 
   post_stats(statString);
 };
@@ -210,18 +159,19 @@ var backend_status = function opentsdb_status(writeCb) {
 };
 
 exports.init = function opentsdb_init(startup_time, config, events) {
+  // Opentsdb configurations
   debug = config.debug;
   opentsdbHost      = config.opentsdbHost;
   opentsdbPort      = config.opentsdbPort;
   opentsdbPrefix    = config.opentsdbPrefix;
 
-  config.opentsdb = config.opentsdb || {};
+  // Extra parameters for statsd metrics
+  config.opentsdb   = config.opentsdb || {};
   prefixCounter     = config.opentsdb.prefixCounter;
   prefixTimer       = config.opentsdb.prefixTimer;
   prefixGauge       = config.opentsdb.prefixGauge;
   prefixSet         = config.opentsdb.prefixSet;
 
-  // set defaults for prefixes
   prefixCounter = prefixCounter !== undefined ? prefixCounter : "";
   prefixTimer   = prefixTimer !== undefined ? prefixTimer : "";
   prefixGauge   = prefixGauge !== undefined ? prefixGauge : "";
