@@ -69,6 +69,7 @@ function parse_tags(metric_name) {
   var current_tag_name = '';
   for (i in parts) {
     for (var tag in tagSet) {
+      console.log(i + " " + tag);
       if (i === tag) {
         console.log(tagSet[tag]);
       }
