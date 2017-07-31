@@ -16,7 +16,7 @@ var net = require('net'),
     util = require('util');
     request = require('request');
     os = require("os");
-
+    queryString = require('querystring');
 
 var debug;
 var flushInterval;
@@ -32,22 +32,19 @@ var prefixSet;
 
 var tagSet;
 
-var opentsdbStats = {};
-
-var post_stats = function opentsdb_post_stats(statString) {
+var post_stats = function opentsdb_post_stats(statsCollection) {
   if (opentsdbHost) {
     try {
-      var ts = Math.round(new Date().getTime() / 1000);
-      var metrics = statString.split("\n");
-      for (var i = 0; i < metrics.length; i++) {
-        console.log(metrics[i]);
-        var metric = metrics[i].split(" ");
-        if (metric[1] && metric[2]) {
+      for (statIndex in statsCollection) {
+        var stat = statsCollection[statIndex];
+        var parsedTags = queryString.parse(stat['tags']);
+        parsedTags['hostname'] = os.hostname();
+        if (stat['name'] && stat['ts']) {
           request.post(opentsdbHost,
-            { json: { metric: metric[0],
-                      timestamp: metric[1],
-                      value: metric[2],
-                      tags: {hostname: os.hostname()} } },
+            { json: { metric: stat['name'],
+                      timestamp: stat['ts'],
+                      value: stat['value'],
+                      tags: parsedTags } },
               function (error, response, body) {
                 util.log(error);
               }
@@ -65,92 +62,90 @@ var post_stats = function opentsdb_post_stats(statString) {
 // Returns a list of "tagname=tagvalue" strings from the given metric name.
 function parse_tags(metric_name) {
   var parts = metric_name.split('.');
-  var tags = [];
-  var current_tag_name = '';
-  for (i in parts) {
+  var tags = '';
+  for (var i = 0; i < parts.length; i++) {
+    var matched =  false;
+    var part = parts[i];
     for (var tag in tagSet) {
-      console.log(i + " " + tag);
-      if (i === tag) {
-        console.log(tagSet[tag]);
+      var regex = new RegExp(tag);
+      if (part.match(regex)) {
+        tags += tagSet[tag] + '=' + part + '&';
+        matched = true;
+        break;
       }
     }
-  }
-
-  return tags;
-}
-
-// Strips out all tag information from the given metric name
-function strip_tags(metric_name) {
-  var parts = metric_name.split('.');
-  var rslt_parts = [];
-  while (parts.length > 0) {
-    if (parts[0].indexOf(opentsdbPrefix) == 0) {
-      parts.shift();
-      parts.shift();
-      continue;
+    if (matched) {
+      parts.splice(i, 1);
     }
-    rslt_parts.push(parts.shift());
   }
 
-  return rslt_parts.join('.');
+  return {name : parts.join('.') , tags : tags.slice(0, -1)};
 }
-
 
 var flush_stats = function opentsdb_flush(ts, metrics) {
-  var suffix = "\n";
-  var starttime = Date.now();
-  var statString = '';
+  var statsCollection = [];
   var key;
   var timer_data_key;
   var counters = metrics.counters;
   var gauges = metrics.gauges;
-  var timers = metrics.timers;
   var sets = metrics.sets;
   var timer_data = metrics.timer_data;
   var statsd_metrics = metrics.statsd_metrics;
 
   for (key in counters) {
-    var tags = parse_tags(key);
-    var stripped_key = strip_tags(key)
-    var value = counters[key];
-    statString += opentsdbPrefix + '.' + prefixCounter + '.' + stripped_key + '.count' + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
+    var metric = {};
+    var name_tags = parse_tags(key);
+    metric['name'] = opentsdbPrefix + '.' + prefixCounter + '.' + name_tags['name'] + '.count';
+    metric['ts'] = ts;
+    metric['value'] = counters[key];
+    metric['tags'] = name_tags['tags'];
+    statsCollection.push(metric);
   }
 
   for (key in timer_data) {
     if (Object.keys(timer_data).length > 0) {
       for (timer_data_key in timer_data[key]) {
-        var tags = parse_tags(key);
-        var stripped_key = strip_tags(key)
-        var the_key = opentsdbPrefix + '.' + prefixTimer + '.' + stripped_key;
-        statString += the_key + '.' + timer_data_key + ' ' + ts + ' ' + timer_data[key][timer_data_key] + ' ' + tags.join(' ') + suffix;
+        var metric = {};
+        var name_tags = parse_tags(key);
+        metric['name'] = opentsdbPrefix + '.' + prefixTimer + '.' + name_tags['name'] + '.' + timer_data_key;
+        metric['ts'] = ts;
+        metric['value'] = timer_data[key][timer_data_key];
+        metric['tags'] = name_tags['tags'];
+        statsCollection.push(metric);
       }
     }
   }
 
   for (key in gauges) {
-    var tags = parse_tags(key);
-    var stripped_key = strip_tags(key)
-    statString += opentsdbPrefix + '.' + prefixGauge + '.' + stripped_key + '.gauge ' + ts + ' ' + gauges[key] + ' ' + tags.join(' ') + suffix;
+    var metric = {};
+    var name_tags = parse_tags(key);
+    metric['name'] = opentsdbPrefix + '.' + prefixGauge + '.' + name_tags['name'] + '.gauge';
+    metric['ts'] = ts;
+    metric['value'] = gauges[key];
+    metric['tags'] = name_tags['tags'];
+    statsCollection.push(metric);
   }
 
   for (key in sets) {
-    var stripped_key = strip_tags(key)
-    var tags = parse_tags(key);
-    var name = opentsdbPrefix + '.' + prefixSet + '.' + stripped_key
-    statString += name + '.count ' + ts + ' ' + sets[key].values().length + ' ' + tags.join(' ') + suffix;
+    var metric = {};
+    var name_tags = parse_tags(key);
+    metric['name'] = opentsdbPrefix + '.' + prefixSet + '.' + name_tags['name'] + '.count';
+    metric['ts'] = ts;
+    metric['value'] = sets[key].values().length;
+    metric['tags'] = name_tags['tags'];
+    statsCollection.push(metric);
   }
 
   for (key in statsd_metrics) {
-    statString += opentsdbPrefix + '.' + key + ' ' + ts + ' ' + statsd_metrics[key];
+    var metric = {};
+    metric['name'] = opentsdbPrefix + '.' + key;
+    metric['ts'] = ts;
+    metric['value'] = statsd_metrics[key];
+    metric['tags'] = {};
+    statsCollection.push(metric);
   }
 
-  post_stats(statString);
-};
-
-var backend_status = function opentsdb_status(writeCb) {
-  for (stat in opentsdbStats) {
-    writeCb(null, 'opentsdb', stat, opentsdbStats[stat]);
-  }
+  post_stats(statsCollection);
 };
 
 exports.init = function opentsdb_init(startup_time, config, events) {
