@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/SuNaden/statsd-opentsdb/issues"
   },
-  "homepage": "https://github.com/SuNaden/statsd-opentsdb#readme"
+  "homepage": "https://github.com/SuNaden/statsd-opentsdb#readme",
+  "dependencies": {
+    "os": "^0.1.1",
+    "querystring": "^0.2.0",
+    "request": "^2.81.0",
+    "util": "^0.10.3"
+  }
 }

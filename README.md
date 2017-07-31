@@ -1,2 +1,2 @@
 # statsd-opentsdb
-Pluggable backend for statsd to send data to opentsdb via HTTP requests
+Pluggable backend for statsd to send data to Opentsdb via HTTP requests
