@@ -2,10 +2,10 @@
  * Flush stats to OpenTSDB (http://opentsdb.net/). Inspired by the
  * https://github.com/danslimmon/statsd-opentsdb-backend backend.
  *
- * To enable this backend, include 'statsd-opentsdb' in the backends
+ * To enable this backend, include 'statsd-opentsdb-request' in the backends
  * configuration array:
  *
- *   backends: ['statsd-opentsdb']
+ *   backends: ['statsd-opentsdb-request']
  *
  * This backend supports the following config options:
  *
