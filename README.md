@@ -27,7 +27,7 @@ opentsdb: {
   prefixTimer : Prefix for all timer metrics ,
   prefixGauge : Prefix for all gauge metrics ,
   prefixSet : Prefix for all set metrics ,
-  tagSet : Key/value store determining tags to be parsed, explained in detail below
+  tags : Key/value store determining tags to be parsed, explained in detail below
 }
 ```
 
@@ -41,23 +41,23 @@ opentsdb: {
   prefixTimer : 'timers_test' ,
   prefixGauge : 'gauges_test' ,
   prefixSet : 'sets_test' ,
-  tagSet : {
+  tags : {
     ".*test" : "test_type",
     "AWS|localhost" : "host_name"
   }
 }
 ```
 
-# tagSet in detail
-To support submitting to OpenTSDB with tags customisable by the user, we can specify them in the mentioned `tagSet` as an array of key/value or to be more precise in this case, regex/tag. So yeah, the key is a regex matching the submitted name of the metric and the value would be the tag name to which it should be assigned. This probably did not make a lot of sense so let's walk through an example.
+# tags in detail
+To support submitting to OpenTSDB with tags customisable by the user, we can specify them in the mentioned `tags` as an array of key/value or to be more precise in this case, regex/tag. So yeah, the key is a regex matching the submitted name of the metric and the value would be the tag name to which it should be assigned. This probably did not make a lot of sense so let's walk through an example.
 
 You have a metric name `statsd.frontendMachine.invalidArgumentException.exception`.
 
 You want to aggregate all exceptions which should be sent to OpenTSDB, and you want the tags to be `exception_type` and `machine` which in this case are `invalidArgumentException` and `frontendMachine` and which would leave you with a metric name of `statsd.exception`. 
 
-The `tagSet` config part would look something like this (yes I know, hire me now for my regex skills)
+The `tags` config part would look something like this (yes I know, hire me now for my regex skills)
 ```
-tagSet : {
+tags : {
   ".*Machine" : "machine",
   ".*Exception" : "exception_type"
 }
