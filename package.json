@@ -1,6 +1,6 @@
 {
   "name": "statsd-opentsdb-request",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Pluggable backend for statsd to send data to opentsdb via HTTP requests Edit",
   "main": "src/statsd-opentsdb-request.js",
   "scripts": {
