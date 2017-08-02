@@ -75,7 +75,7 @@ tags: { machine : "frontendMachine", exception_type : "invalidArgumentException"
 
 ### Regex tags with metric index
 
-In such cases when you don't really have a control about a metric name (like it's sent from a 3rd party), but you know that the second field will ALWAYS need to be converted to a tag named `endpoint`. There is an easy solution! Just suffix your regex with `_i_1`! That means that the given matched regexp can be only matched at the given index of a metric name (remember that we are splitting the metric name on dots and we index from 0, that's why it is `_i_1`).
+In such cases when you don't really have a control about a metric name (like it's sent from a 3rd party), but you know that the splitted metric name at index `x` will ALWAYS need to be converted to a tag. There is an easy solution! Just suffix your regex with `_i_x`! That means that the given regexp can be only matched at the given index of a metric name (remember that we are splitting the metric name on dots and we index from 0).
 
 ```
 tags : {
@@ -83,7 +83,7 @@ tags : {
   ".*Exception_i_3" : "exception_type"
 }
 ```
-So the `tags` above would match ANYTHING at the metric name index 1 to the tag `endpoint` and they will also match anything what matched regex `.*Exception` AND is indexed in metrics as 3. For example both of the rules would match a metric name
+So the `tags` above would match ANYTHING at the index 1 and save it under the tag `endpoint`. Next, we match anything what matches regex `.*Exception` AND is indexed at 3. For example both of the rules would match a metric name
 ```
 test.backend.this.InvalidException
 ```
