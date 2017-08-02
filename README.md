@@ -51,6 +51,8 @@ opentsdb: {
 # tags in detail
 To support submitting to OpenTSDB with tags customisable by the user, we can specify them in the mentioned `tags` as an array of key/value or to be more precise in this case, regex/tag. So yeah, the key is a regex matching the submitted name of the metric and the value would be the tag name to which it should be assigned. This probably did not make a lot of sense so let's walk through an example.
 
+### Regex tags
+
 You have a metric name `statsd.frontendMachine.invalidArgumentException.exception`.
 
 You want to aggregate all exceptions which should be sent to OpenTSDB, and you want the tags to be `exception_type` and `machine` which in this case are `invalidArgumentException` and `frontendMachine` and which would leave you with a metric name of `statsd.exception`. 
@@ -70,3 +72,26 @@ timestamp : 1501513598,
 value: 1,
 tags: { machine : "frontendMachine", exception_type : "invalidArgumentException"}
 ```
+
+### Regex tags with metric index
+
+In such cases when you don't really have a control about a metric name (like it's sent from a 3rd party), but you know that the second field will ALWAYS need to be converted to a tag named `endpoint`. There is an easy solution! Just suffix your regex with `_i_1`! That means that the given matched regexp can be only matched at the given index of a metric name (remember that we are splitting the metric name on dots and we index from 0, that's why it is `_i_1`).
+
+```
+tags : {
+  ".*_i_1" : "endpoint",
+  ".*Exception_i_3" : "exception_type"
+}
+```
+So the `tags` above would match ANYTHING at the metric name index 1 to the tag `endpoint` and they will also match anything what matched regex `.*Exception` AND is indexed in metrics as 3. For example both of the rules would match a metric name
+```
+test.backend.this.InvalidException
+```
+because the `backend` is on index `1` and `InvalidException` matched the regex `.*Exception` AND is indexed at position `3`.
+
+Just to make it clear, the `endpoint` rules will match the `backend` below, but nothing will happen to `InvalidException` because it is on index `2` and not `3`.
+```
+test.backend.InvalidException.this
+```
+
+
