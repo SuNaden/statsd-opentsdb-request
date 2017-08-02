@@ -39,6 +39,8 @@ var prefixTimer;
 var prefixGauge;
 var prefixSet;
 
+var indexRegex = new RegExp("(^.*)_i_([0-9]+$)");
+
 var tagSet;
 
 // Sending of the constructed metrics via a request
@@ -73,24 +75,35 @@ var post_stats = function opentsdb_post_stats(statsCollection) {
 // their respective values
 function parse_tags(metric_name) {
   var parts = metric_name.split('.');
+  var metricNameParts = [];
   var tags = '';
+
   for (var i = 0; i < parts.length; i++) {
     var matched =  false;
     var part = parts[i];
+
     for (var tag in tagSet) {
-      var regex = new RegExp(tag);
-      if (part.match(regex)) {
+      var userRegex = tag;
+      var index = i;
+      if (tag.match(indexRegex)) {
+        userRegex = tag.match(indexRegex)[1];
+        index = tag.match(indexRegex)[2];
+      }
+
+      var regex = new RegExp(userRegex);
+      if (part.match(regex) && index == i) {
         tags += tagSet[tag] + '=' + part + '&';
         matched = true;
         break;
       }
     }
-    if (matched) {
-      parts.splice(i, 1);
+    
+    if (!matched) {
+      metricNameParts.push(part);
     }
   }
 
-  return {name : parts.join('.') , tags : tags.slice(0, -1)};
+  return {name : metricNameParts.join('.') , tags : tags.slice(0, -1)};
 }
 
 // Parse the stats given by statsd, split the tags from the name and submit
