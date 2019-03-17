@@ -49,15 +49,15 @@ opentsdb: {
 ```
 
 # tags in detail
-To support submitting to OpenTSDB with tags customisable by the user, we can specify them in the mentioned `tags` as an array of key/value or to be more precise in this case, regex/tag. So yeah, the key is a regex matching the submitted name of the metric and the value would be the tag name to which it should be assigned. This probably did not make a lot of sense so let's walk through an example.
+To support submitting to OpenTSDB with tags customisable by the user, we can specify them in the mentioned `tags` as an array of key/value or to be more precise in this case, regex/tag. The key is a regex matching the submitted name of the metric and the value would be the tag name to which it should be assigned. If this did not make a lot of sense please take a look at some examples below.
 
 ### Regex tags
 
-You have a metric name `statsd.frontendMachine.invalidArgumentException.exception`.
+There is a metric with name `statsd.frontendMachine.invalidArgumentException.exception`.
 
 You want to aggregate all exceptions which should be sent to OpenTSDB, and you want the tags to be `exception_type` and `machine` which in this case are `invalidArgumentException` and `frontendMachine` and which would leave you with a metric name of `statsd.exception`. 
 
-The `tags` config part would look something like this (yes I know, hire me now for my regex skills)
+The `tags` config part would look something like this
 ```
 tags : {
   ".*Machine" : "machine",
@@ -75,7 +75,7 @@ tags: { machine : "frontendMachine", exception_type : "invalidArgumentException"
 
 ### Regex tags with metric index
 
-In such cases when you don't really have a control about a metric name (like it's sent from a 3rd party), but you know that the splitted metric name at index `x` will ALWAYS need to be converted to a tag. There is an easy solution! Just suffix your regex with `_i_x`! That means that the given regexp can be only matched at the given index of a metric name (remember that we are splitting the metric name on dots and we index from 0).
+There are cases when you don't really have a control of a metric name (like it's sent from a 3rd party or simply it's dynamically generated), but you know that it will *always* be on a certain index (when split by '.' character). There is an easy solution, just suffix your regex with `_i_x`. That means that the given regexp can be only matched at the given index of a metric name (remember that we are splitting the metric name on dots and we index from 0).
 
 ```
 tags : {
@@ -83,7 +83,7 @@ tags : {
   ".*Exception_i_3" : "exception_type"
 }
 ```
-So the `tags` above would match ANYTHING at the index 1 and save it under the tag `endpoint`. Next, we match anything what matches regex `.*Exception` AND is indexed at 3. For example both of the rules would match a metric name
+So the `tags` above would match *anything* at the index 1 and save it under the tag `endpoint`. Next, we match anything what matches regex `.*Exception` and is indexed at 3. For example both of the rules would match a metric name
 ```
 test.backend.this.InvalidException
 ```
